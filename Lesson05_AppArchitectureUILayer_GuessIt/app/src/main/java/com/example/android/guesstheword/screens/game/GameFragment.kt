@@ -16,15 +16,18 @@
 
 package com.example.android.guesstheword.screens.game
 
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.getSystemService
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.fragment.NavHostFragment.findNavController
 import com.example.android.guesstheword.R
 import com.example.android.guesstheword.databinding.GameFragmentBinding
@@ -40,7 +43,6 @@ class GameFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
 
-        // Inflate view and obtain an instance of the binding class
         binding = DataBindingUtil.inflate(
                 inflater,
                 R.layout.game_fragment,
@@ -48,36 +50,44 @@ class GameFragment : Fragment() {
                 false
         )
 
-        viewModel = ViewModelProviders.of(this).get(GameViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(GameViewModel::class.java)
 
-        binding.correctButton.setOnClickListener {
-            viewModel.onCorrect()
-            updateWordText()
-            updateScoreText()
-        }
+        binding.gameViewModel = viewModel
+        binding.lifecycleOwner = viewLifecycleOwner
 
-        binding.skipButton.setOnClickListener {
-            viewModel.onSkip()
-            updateWordText()
-            updateScoreText()
-        }
+        viewModel.eventGameFinished.observe(viewLifecycleOwner, Observer { hasFinished ->
+            if (hasFinished) {
+                gameFinished()
+                viewModel.gameFinishedCompleted()
+            }
+        })
 
-        updateWordText()
-        updateScoreText()
+        viewModel.eventBuzz.observe(viewLifecycleOwner, Observer { buzzPattern ->
+            if (buzzPattern != GameViewModel.BuzzType.NO_BUZZ) {
+                buzz(buzzPattern.pattern)
+                viewModel.onBuzzFinished()
+            }
+        })
 
         return binding.root
     }
 
     private fun gameFinished() {
-        val action = GameFragmentDirections.actionGameToScore(viewModel.score)
+        val action = GameFragmentDirections.actionGameToScore(viewModel.score.value ?: 0)
         findNavController(this).navigate(action)
     }
 
-    private fun updateWordText() {
-        binding.wordText.text = viewModel.word
-    }
+    private fun buzz(pattern: LongArray) {
+        val buzzer = activity?.getSystemService<Vibrator>()
 
-    private fun updateScoreText() {
-        binding.scoreText.text = viewModel.score.toString()
+        buzzer?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                buzzer.vibrate(VibrationEffect.createWaveform(pattern, -1))
+                return
+            }
+
+            //deprecated in API 26
+            buzzer.vibrate(pattern, -1)
+        }
     }
 }
