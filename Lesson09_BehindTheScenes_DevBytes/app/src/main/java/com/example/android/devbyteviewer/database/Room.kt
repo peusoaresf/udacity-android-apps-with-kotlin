@@ -37,7 +37,7 @@ abstract class VideosDatabase: RoomDatabase() {
 
 private lateinit var INSTANCE: VideosDatabase
 
-fun getDabatabase(context: Context): VideosDatabase {
+fun getDatabase(context: Context): VideosDatabase {
     synchronized(VideosDatabase::class.java) {
         if (!::INSTANCE.isInitialized) {
             INSTANCE = Room.databaseBuilder(
