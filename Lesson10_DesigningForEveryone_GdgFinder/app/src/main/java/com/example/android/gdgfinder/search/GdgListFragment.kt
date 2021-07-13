@@ -14,6 +14,8 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.android.gdgfinder.databinding.FragmentGdgListBinding
 import com.google.android.gms.location.*
 import com.google.android.material.snackbar.Snackbar
+import com.example.android.gdgfinder.R
+import com.google.android.material.chip.Chip
 
 private const val LOCATION_PERMISSION_REQUEST = 1
 
@@ -54,6 +56,29 @@ class GdgListFragment : Fragment() {
                         Snackbar.LENGTH_LONG
                     ).show()
                 }
+            }
+        })
+
+        viewModel.regionList.observe(viewLifecycleOwner, Observer { regions ->
+            regions ?: return@Observer
+
+            val chipGroup = binding.regionsList
+            val inflator = LayoutInflater.from(chipGroup.context)
+
+            val children = regions.map { region ->
+                val chip = inflator.inflate(R.layout.region, chipGroup, false) as Chip
+                chip.text = region
+                chip.tag = region
+                chip.setOnCheckedChangeListener { button, isChecked ->
+                    viewModel.onFilterChanged(button.tag as String, isChecked)
+                }
+                chip
+            }
+
+            chipGroup.removeAllViews()
+
+            for (chip in children) {
+                chipGroup.addView(chip)
             }
         })
 
